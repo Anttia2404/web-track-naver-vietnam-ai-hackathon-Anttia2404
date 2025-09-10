@@ -1,21 +1,23 @@
-import './App.css'
-import hackathonGraphic from './assets/hackathon-graphic.svg'
-import naverLogo from './assets/naver-logo.svg'
+import React from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import Navbar from './components/Navbar'
+import DoNowView from './views/DoNowView'
+import CalendarView from './views/CalendarView'
+import AnalyticsView from './views/AnalyticsView'
 
-function App() {
+const App: React.FC = () => {
   return (
-    <div className="container">
-      <div className="content">
-        <img src={naverLogo} alt="NAVER Vietnam AI Hackathon" className="logo" />
-        
-        <div className="greeting">
-          <p className="hello">Xin chào! 안녕하세요!</p>
-          <p className="subtitle">Hello World</p>
-        </div>
+    <Router>
+      <Navbar />
+      <div style={{ padding: 20 }}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/do-now" replace />} />
+          <Route path="/do-now" element={<DoNowView />} />
+          <Route path="/calendar" element={<CalendarView />} />
+          <Route path="/analytics" element={<AnalyticsView />} />
+        </Routes>
       </div>
-      
-      <img className="graphic" src={hackathonGraphic} alt="" />
-    </div>
+    </Router>
   )
 }
 
