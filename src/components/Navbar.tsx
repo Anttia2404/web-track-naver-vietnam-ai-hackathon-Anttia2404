@@ -1,4 +1,3 @@
-import React from 'react'
 import { NavLink } from 'react-router-dom'
 
 const activeStyle = { color: '#e11d48', fontWeight: 700 }
