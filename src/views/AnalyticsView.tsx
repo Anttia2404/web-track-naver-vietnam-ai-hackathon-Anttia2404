@@ -13,10 +13,23 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import type { Task } from "../context/TasksContext";
+
+// helper: format date YYYY-MM-DD
+const formatDate = (d: Date) => d.toISOString().split("T")[0];
+
+// helper: tính hạn thực tế từ officialDeadline + avgDelay (fallback 15p)
+const getRealDeadline = (task: Task) => {
+  if (!task.officialDeadline) return undefined;
+  const avgDelay = 15;
+  const deadlineMs = new Date(task.officialDeadline).getTime();
+  return new Date(deadlineMs - avgDelay * 60_000).toISOString();
+};
 
 export default function AnalyticsView() {
   const { tasks } = useTasks();
 
+  // --- Pie chart: Completed vs Pending
   const doneCount = tasks.filter((t) => t.done).length;
   const notDoneCount = tasks.length - doneCount;
 
@@ -26,25 +39,34 @@ export default function AnalyticsView() {
   ];
   const COLORS = ["#4ade80", "#f87171"];
 
-  // --- Tasks by Deadline (gom theo ngày)
+  // --- Bar chart: tasks by deadline (official or real)
   const tasksByDate: Record<string, number> = {};
   tasks.forEach((t) => {
-    if (t.deadline) {
-      const day = new Date(t.deadline).toISOString().split("T")[0]; // YYYY-MM-DD
-      tasksByDate[day] = (tasksByDate[day] || 0) + 1;
-    }
+    const off = t.officialDeadline
+      ? formatDate(new Date(t.officialDeadline))
+      : undefined;
+    const real = t.realDeadline
+      ? formatDate(new Date(t.realDeadline))
+      : getRealDeadline(t);
+
+    const d = off || real;
+    if (d) tasksByDate[d] = (tasksByDate[d] || 0) + 1;
   });
   const barData = Object.entries(tasksByDate).map(([date, count]) => ({
     date,
     count,
   }));
 
-  // --- Productivity model: task completed per day
+  // --- Line chart: productivity (doneAt > officialDeadline)
   const doneByDate: Record<string, number> = {};
   tasks.forEach((t) => {
-    if (t.done && t.deadline) {
-      const day = new Date(t.deadline).toISOString().split("T")[0];
-      doneByDate[day] = (doneByDate[day] || 0) + 1;
+    if (t.done) {
+      const when = t.doneAt
+        ? formatDate(new Date(t.doneAt))
+        : t.officialDeadline
+        ? formatDate(new Date(t.officialDeadline))
+        : undefined;
+      if (when) doneByDate[when] = (doneByDate[when] || 0) + 1;
     }
   });
   const productivityData = Object.entries(doneByDate).map(([date, count]) => ({
@@ -52,12 +74,19 @@ export default function AnalyticsView() {
     count,
   }));
 
-  // --- Best work hours: giờ hoàn thành task
+  // --- Bar chart: best work hours
   const hours: Record<number, number> = {};
   tasks.forEach((t) => {
-    if (t.done && t.deadline) {
-      const hour = new Date(t.deadline).getHours();
-      hours[hour] = (hours[hour] || 0) + 1;
+    if (t.done) {
+      const when = t.doneAt
+        ? new Date(t.doneAt)
+        : t.officialDeadline
+        ? new Date(t.officialDeadline)
+        : null;
+      if (when) {
+        const h = when.getHours();
+        hours[h] = (hours[h] || 0) + 1;
+      }
     }
   });
   const hoursData = Array.from({ length: 24 }, (_, h) => ({
@@ -84,10 +113,7 @@ export default function AnalyticsView() {
                 label
               >
                 {pieData.map((_, index) => (
-                  <Cell
-                    key={index}
-                    fill={COLORS[index % COLORS.length]}
-                  />
+                  <Cell key={index} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip />
@@ -95,7 +121,7 @@ export default function AnalyticsView() {
           </ResponsiveContainer>
         </div>
 
-        {/* Bar Chart */}
+        {/* Tasks by Deadline */}
         <div style={{ width: 400, height: 300 }}>
           <h3>Tasks by Deadline</h3>
           <ResponsiveContainer>
@@ -109,7 +135,7 @@ export default function AnalyticsView() {
           </ResponsiveContainer>
         </div>
 
-        {/* Productivity Line Chart */}
+        {/* Productivity Over Time */}
         <div style={{ width: 400, height: 300 }}>
           <h3>Productivity Over Time</h3>
           <ResponsiveContainer>

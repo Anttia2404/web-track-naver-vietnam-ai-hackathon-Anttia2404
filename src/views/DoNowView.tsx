@@ -10,7 +10,7 @@ interface MetaData {
 export default function DoNowView() {
   const { tasks, addTask, toggleTask, removeTask } = useTasks();
   const [title, setTitle] = useState("");
-  const [deadline, setDeadline] = useState("");
+  const [officialDeadline, setOfficialDeadline] = useState("");
   const [estimate, setEstimate] = useState<number>(30);
   const [history, setHistory] = useState<Record<string, number>>({});
   const [meta, setMeta] = useState<Record<string, MetaData>>({});
@@ -32,15 +32,23 @@ export default function DoNowView() {
     return Math.round(delays.reduce((a, b) => a + b, 0) / delays.length);
   }
 
-  // AI sort: deadline + postpone history
+  // AI sort: officialDeadline + postpone history
   useEffect(() => {
     const now = Date.now();
     const sorted = [...tasks].sort((a, b) => {
-      const aDeadline = a.deadline ? new Date(a.deadline).getTime() : Infinity;
-      const bDeadline = b.deadline ? new Date(b.deadline).getTime() : Infinity;
+      const aDeadline = a.officialDeadline
+        ? new Date(a.officialDeadline).getTime()
+        : Infinity;
+      const bDeadline = b.officialDeadline
+        ? new Date(b.officialDeadline).getTime()
+        : Infinity;
 
-      const aUrgency = a.deadline ? Math.max(1, (aDeadline - now) / (1000 * 60 * 60)) : 99999;
-      const bUrgency = b.deadline ? Math.max(1, (bDeadline - now) / (1000 * 60 * 60)) : 99999;
+      const aUrgency = a.officialDeadline
+        ? Math.max(1, (aDeadline - now) / (1000 * 60 * 60))
+        : 99999;
+      const bUrgency = b.officialDeadline
+        ? Math.max(1, (bDeadline - now) / (1000 * 60 * 60))
+        : 99999;
 
       const aScore = (1 / aUrgency) * 100 + (history[a.id] || 0) * 10;
       const bScore = (1 / bUrgency) * 100 + (history[b.id] || 0) * 10;
@@ -56,7 +64,7 @@ export default function DoNowView() {
     if (!title.trim()) return;
 
     const newId = String(Date.now());
-    addTask(title, deadline || undefined, newId, estimate);
+    addTask(title, officialDeadline || undefined, estimate, newId);
 
     setMeta((prev) => ({
       ...prev,
@@ -67,7 +75,7 @@ export default function DoNowView() {
     }));
 
     setTitle("");
-    setDeadline("");
+    setOfficialDeadline("");
     setEstimate(30);
   };
 
@@ -119,14 +127,16 @@ export default function DoNowView() {
       const avgDelay = getAverageDelay();
 
       tasks.forEach((t) => {
-        if (!t.deadline || t.done) return;
+        if (!t.officialDeadline || t.done) return;
 
-        const deadlineMs = new Date(t.deadline).getTime();
+        const deadlineMs = new Date(t.officialDeadline).getTime();
         const effectiveDeadline = deadlineMs - avgDelay * 60_000;
 
         if (now >= effectiveDeadline && now < deadlineMs) {
           new Notification("⏰ Bắt đầu ngay kẻo trễ!", {
-            body: `Task: ${t.title}\nDeadline: ${new Date(t.deadline).toLocaleTimeString()}\nThói quen trễ: ~${avgDelay} phút`,
+            body: `Task: ${t.title}\nDeadline: ${new Date(
+              t.officialDeadline
+            ).toLocaleTimeString()}\nThói quen trễ: ~${avgDelay} phút`,
           });
         }
       });
@@ -149,8 +159,8 @@ export default function DoNowView() {
         />
         <input
           type="datetime-local"
-          value={deadline}
-          onChange={(e) => setDeadline(e.target.value)}
+          value={officialDeadline}
+          onChange={(e) => setOfficialDeadline(e.target.value)}
           style={{ marginRight: 10 }}
         />
         <input
@@ -162,7 +172,11 @@ export default function DoNowView() {
           placeholder="min"
         />
         <button type="submit">Add Task</button>
-        <button type="button" onClick={() => setHistory({})} style={{ marginLeft: 10 }}>
+        <button
+          type="button"
+          onClick={() => setHistory({})}
+          style={{ marginLeft: 10 }}
+        >
           Reset
         </button>
       </form>
@@ -171,24 +185,25 @@ export default function DoNowView() {
         {sortedTasks.map((task) => {
           const m = meta[task.id];
           const avgDelay = getAverageDelay();
-          const officialDeadline = task.deadline ? new Date(task.deadline).getTime() : null;
-          const effectiveDeadline =
-            officialDeadline && m?.estimate
-              ? new Date(officialDeadline - (m.estimate + avgDelay) * 60_000)
-              : null;
 
           return (
             <li key={task.id} style={{ marginBottom: 8 }}>
-              <span style={{ textDecoration: task.done ? "line-through" : "none", marginRight: 10 }}>
+              <span
+                style={{
+                  textDecoration: task.done ? "line-through" : "none",
+                  marginRight: 10,
+                }}
+              >
                 {task.title}
-                {officialDeadline && (
+                {task.officialDeadline && (
                   <small style={{ marginLeft: 6, color: "#888" }}>
-                    🕒 chính thức: {new Date(officialDeadline).toLocaleString()}
+                    🕒 chính thức:{" "}
+                    {new Date(task.officialDeadline).toLocaleString()}
                   </small>
                 )}
-                {effectiveDeadline && (
+                {task.realDeadline && (
                   <small style={{ marginLeft: 6, color: "red" }}>
-                    ⏳ thực tế: {effectiveDeadline.toLocaleString()}
+                    ⏳ thực tế: {new Date(task.realDeadline).toLocaleString()}
                   </small>
                 )}
                 {history[task.id] > 0 && (
@@ -210,7 +225,10 @@ export default function DoNowView() {
               <button onClick={() => handleToggle(task.id)}>
                 {task.done ? "Undo" : "Done"}
               </button>
-              <button onClick={() => removeTask(task.id)} style={{ marginLeft: 6, color: "red" }}>
+              <button
+                onClick={() => removeTask(task.id)}
+                style={{ marginLeft: 6, color: "red" }}
+              >
                 Delete
               </button>
             </li>

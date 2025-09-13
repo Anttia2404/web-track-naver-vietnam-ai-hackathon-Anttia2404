@@ -3,7 +3,7 @@ import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import { useTasks } from "../context/TasksContext";
 
-// format date theo local thành YYYY-MM-DD (ổn định, không bị dịch timezone)
+// format date thành YYYY-MM-DD (ổn định, không bị dịch timezone)
 const formatDate = (d: Date) => {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -11,8 +11,8 @@ const formatDate = (d: Date) => {
   return `${y}-${m}-${day}`;
 };
 
-// chuẩn hóa deadline của task sang YYYY-MM-DD để dễ so sánh
-const normalizeDeadline = (deadline: any) => {
+// chuẩn hóa deadline sang YYYY-MM-DD để dễ so sánh
+const normalizeDeadline = (deadline?: string | Date) => {
   if (!deadline) return "";
 
   if (deadline instanceof Date) return formatDate(deadline);
@@ -29,18 +29,33 @@ export default function CalendarView() {
   const { tasks } = useTasks();
   const [date, setDate] = useState<Date>(new Date());
 
-  const selectedDate = formatDate(date); // YYYY-MM-DD theo local
-  const tasksForDay = tasks.filter(
-    (t) =>
-      normalizeDeadline(t.deadline) === selectedDate ||
-      normalizeDeadline(t.officialDeadline) === selectedDate
-  );
+  const selectedDate = formatDate(date);
 
-  // Đếm số task theo ngày (ưu tiên officialDeadline, fallback deadline)
+  // =========================
+  //  Tính hạn thực tế (realDeadline)
+  // =========================
+  const getRealDeadline = (t: any) => {
+    if (!t.officialDeadline) return undefined;
+
+    // Nếu task có delay trung bình thì tính
+    const avgDelay = t.avgDelay || 15; // fallback 15 phút
+    const deadlineMs = new Date(t.officialDeadline).getTime();
+    return new Date(deadlineMs - avgDelay * 60_000).toISOString();
+  };
+
+  // Lọc task cho ngày đã chọn (so cả officialDeadline và realDeadline)
+  const tasksForDay = tasks.filter((t) => {
+    const off = normalizeDeadline(t.officialDeadline);
+    const real = normalizeDeadline(getRealDeadline(t));
+    return off === selectedDate || real === selectedDate;
+  });
+
+  // Đếm số task theo ngày (ưu tiên officialDeadline, fallback realDeadline)
   const tasksByDate: Record<string, number> = {};
   tasks.forEach((t) => {
-    const d =
-      normalizeDeadline(t.officialDeadline) || normalizeDeadline(t.deadline);
+    const off = normalizeDeadline(t.officialDeadline);
+    const real = normalizeDeadline(getRealDeadline(t));
+    const d = off || real;
     if (d) tasksByDate[d] = (tasksByDate[d] || 0) + 1;
   });
 
@@ -48,7 +63,6 @@ export default function CalendarView() {
     <div>
       <h2>📅 Calendar</h2>
 
-      {/* Lịch có đánh dấu trùng hạn */}
       <Calendar
         value={date}
         onChange={(value) => setDate(value as Date)}
@@ -56,7 +70,6 @@ export default function CalendarView() {
           const d = formatDate(date);
           const count = tasksByDate[d] || 0;
 
-          // nếu có task thì hiện chấm, nếu >1 thì ghi số lượng
           if (count > 0) {
             return (
               <div style={{ textAlign: "center", marginTop: 2 }}>
@@ -79,22 +92,32 @@ export default function CalendarView() {
       </h3>
       <ul>
         {tasksForDay.length > 0 ? (
-          tasksForDay.map((task) => (
-            <li key={task.id} style={{ marginBottom: 10 }}>
-              <strong>{task.title}</strong> {task.done && "✅ Done"}
-              <div style={{ fontSize: "0.9em", color: "#555", marginLeft: 8 }}>
-                {task.deadline && (
-                  <div>⏱ Hạn thực tế: {new Date(task.deadline).toLocaleString()}</div>
-                )}
-                {task.officialDeadline && (
-                  <div>
-                    📌 Hạn chính thức:{" "}
-                    {new Date(task.officialDeadline).toLocaleString()}
-                  </div>
-                )}
-              </div>
-            </li>
-          ))
+          tasksForDay.map((task) => {
+            const realDeadline = getRealDeadline(task);
+
+            return (
+              <li key={task.id} style={{ marginBottom: 10 }}>
+                <strong>{task.title}</strong> {task.done && "✅ Done"}
+                <div style={{ fontSize: "0.9em", marginLeft: 8 }}>
+                  {/* Hạn thực tế */}
+                  {realDeadline && (
+                    <div style={{ color: "green" }}>
+                      ⏱ Hạn thực tế:{" "}
+                      {new Date(realDeadline).toLocaleString()}
+                    </div>
+                  )}
+
+                  {/* Hạn chính thức */}
+                  {task.officialDeadline && (
+                    <div style={{ color: "red" }}>
+                      📌 Hạn chính thức:{" "}
+                      {new Date(task.officialDeadline).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              </li>
+            );
+          })
         ) : (
           <p>No tasks for this day.</p>
         )}
