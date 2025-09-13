@@ -1,10 +1,11 @@
-import React, {
+import {
   createContext,
   useContext,
   useState,
   useEffect,
-  type ReactNode,
 } from "react";
+
+import type { ReactNode } from "react";
 
 // ======================
 // Task model
@@ -13,19 +14,18 @@ export interface Task {
   id: string;
   title: string;
   done: boolean;
-  officialDeadline?: string;
-  realDeadline?: string;
-  estimate?: number;
-  doneAt?: string; // <-- thêm dòng này
+  officialDeadline?: string;   // hạn chính thức
+  realDeadline?: string;       // hạn thực tế (đã trừ estimate + delay)
+  estimatedMinutes?: number;   // thời gian dự kiến (phút)
+  doneAt?: string;             // thời điểm hoàn thành
 }
-
 
 interface TasksContextType {
   tasks: Task[];
   addTask: (
     title: string,
     officialDeadline?: string,
-    estimate?: number,
+    estimatedMinutes?: number,
     id?: string
   ) => void;
   toggleTask: (id: string) => void;
@@ -54,16 +54,17 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const addTask = (
     title: string,
     officialDeadline?: string,
-    estimate: number = 30,
+    estimatedMinutes: number = 30,
     id?: string
   ) => {
     let realDeadline: string | undefined;
 
     if (officialDeadline) {
       const od = new Date(officialDeadline).getTime();
-      // mặc định trễ 15 phút nếu chưa có dữ liệu meta
-      const defaultDelay = 15;
-      realDeadline = new Date(od - (estimate + defaultDelay) * 60_000).toISOString();
+      const defaultDelay = 15; // mặc định trễ 15 phút
+      realDeadline = new Date(
+        od - (estimatedMinutes + defaultDelay) * 60_000
+      ).toISOString();
     }
 
     const newTask: Task = {
@@ -72,7 +73,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       done: false,
       officialDeadline,
       realDeadline,
-      estimate,
+      estimatedMinutes,
     };
 
     setTasks((prev) => [...prev, newTask]);
@@ -82,19 +83,18 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   // Toggle task
   // ======================
   const toggleTask = (id: string) => {
-  setTasks((prev) =>
-    prev.map((task) =>
-      task.id === id
-        ? {
-            ...task,
-            done: !task.done,
-            doneAt: !task.done ? new Date().toISOString() : undefined, // set khi chuyển sang done, xóa khi undo
-          }
-        : task
-    )
-  );
-};
-
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === id
+          ? {
+              ...task,
+              done: !task.done,
+              doneAt: !task.done ? new Date().toISOString() : undefined, // set khi done, xóa khi undo
+            }
+          : task
+      )
+    );
+  };
 
   // ======================
   // Remove task
@@ -113,12 +113,12 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
         const updated = { ...t, ...updates };
 
-        // Nếu có thay đổi officialDeadline hoặc estimate → tính lại realDeadline
-        if (updated.officialDeadline && updated.estimate) {
+        // Nếu có thay đổi officialDeadline hoặc estimatedMinutes → tính lại realDeadline
+        if (updated.officialDeadline && updated.estimatedMinutes) {
           const od = new Date(updated.officialDeadline).getTime();
           const defaultDelay = 15;
           updated.realDeadline = new Date(
-            od - (updated.estimate + defaultDelay) * 60_000
+            od - (updated.estimatedMinutes + defaultDelay) * 60_000
           ).toISOString();
         }
 
