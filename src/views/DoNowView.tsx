@@ -3,7 +3,6 @@ import { useTasks } from "../context/TasksContext";
 
 interface MetaData {
   start?: number;
-  estimate?: number; // phút
   actual?: number;   // phút
 }
 
@@ -11,20 +10,21 @@ export default function DoNowView() {
   const { tasks, addTask, toggleTask, removeTask } = useTasks();
   const [title, setTitle] = useState("");
   const [officialDeadline, setOfficialDeadline] = useState("");
-  const [estimate, setEstimate] = useState<number>(30);
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number>(30);
   const [history, setHistory] = useState<Record<string, number>>({});
   const [meta, setMeta] = useState<Record<string, MetaData>>({});
   const [sortedTasks, setSortedTasks] = useState(tasks);
 
   // =========================
-  //  Thói quen trễ
+  //  Average delay
   // =========================
   function getAverageDelay(): number {
     const delays: number[] = [];
     for (const id in meta) {
       const m = meta[id];
-      if (m.start && m.actual) {
-        const delay = m.actual - (m.estimate || 0);
+      const t = tasks.find((task) => task.id === id);
+      if (m.start && m.actual && t?.estimatedMinutes) {
+        const delay = m.actual - t.estimatedMinutes;
         if (delay > 0) delays.push(delay);
       }
     }
@@ -32,7 +32,9 @@ export default function DoNowView() {
     return Math.round(delays.reduce((a, b) => a + b, 0) / delays.length);
   }
 
-  // AI sort: officialDeadline + postpone history
+  // =========================
+  //  Sort tasks
+  // =========================
   useEffect(() => {
     const now = Date.now();
     const sorted = [...tasks].sort((a, b) => {
@@ -58,25 +60,26 @@ export default function DoNowView() {
     setSortedTasks(sorted);
   }, [tasks, history]);
 
-  // Thêm task
+  // =========================
+  //  Add task
+  // =========================
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
     const newId = String(Date.now());
-    addTask(title, officialDeadline || undefined, estimate, newId);
+    addTask(title, officialDeadline || undefined, estimatedMinutes, newId);
 
     setMeta((prev) => ({
       ...prev,
       [newId]: {
         start: Date.now(),
-        estimate,
       },
     }));
 
     setTitle("");
     setOfficialDeadline("");
-    setEstimate(30);
+    setEstimatedMinutes(30);
   };
 
   // reset history khi rời view
@@ -84,7 +87,9 @@ export default function DoNowView() {
     return () => setHistory({});
   }, []);
 
-  // Toggle task
+  // =========================
+  //  Toggle task
+  // =========================
   const handleToggle = (id: string) => {
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
@@ -166,8 +171,8 @@ export default function DoNowView() {
         <input
           type="number"
           min={1}
-          value={estimate}
-          onChange={(e) => setEstimate(Number(e.target.value))}
+          value={estimatedMinutes}
+          onChange={(e) => setEstimatedMinutes(Number(e.target.value))}
           style={{ width: 80, marginRight: 10 }}
           placeholder="min"
         />
@@ -184,7 +189,6 @@ export default function DoNowView() {
       <ul>
         {sortedTasks.map((task) => {
           const m = meta[task.id];
-          const avgDelay = getAverageDelay();
 
           return (
             <li key={task.id} style={{ marginBottom: 8 }}>
@@ -211,9 +215,9 @@ export default function DoNowView() {
                     (postponed {history[task.id]}x)
                   </small>
                 )}
-                {m?.estimate && (
+                {task.estimatedMinutes && (
                   <small style={{ marginLeft: 6, color: "blue" }}>
-                    est: {m.estimate}m
+                    est: {task.estimatedMinutes}m
                   </small>
                 )}
                 {m?.actual !== undefined && (
