@@ -1,60 +1,88 @@
-import { createContext, useContext, useState, useEffect } from "react";
-import type { ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from "react";
 
-export type Task = {
-  id: number;
+// context/TasksContext.tsx
+export interface Task {
+  id: string;
   title: string;
-  deadline?: string;
   done: boolean;
-};
+  deadline?: string;          // deadline do user đặt
+  officialDeadline?: string;  // deadline chính thức (nếu có)
+  estimate?: number;          // thời gian ước lượng
+}
 
-type TasksContextType = {
+
+interface TasksContextType {
   tasks: Task[];
-  addTask: (title: string, deadline?: string) => void;
-  toggleTask: (id: number) => void;
-  removeTask: (id: number) => void;
-};
+  addTask: (
+    title: string,
+    deadline?: string,
+    id?: string,
+    estimate?: number,
+    officialDeadline?: string
+  ) => void;
+  toggleTask: (id: string) => void;
+  removeTask: (id: string) => void;
+  updateTask: (id: string, updates: Partial<Task>) => void;
+}
 
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
 export function TasksProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>(() => {
-    // load từ localStorage khi app khởi động
     const saved = localStorage.getItem("tasks");
     return saved ? JSON.parse(saved) : [];
   });
 
-  // lưu vào localStorage khi tasks thay đổi
   useEffect(() => {
     localStorage.setItem("tasks", JSON.stringify(tasks));
   }, [tasks]);
 
-  const addTask = (title: string, deadline?: string) => {
-    setTasks((prev) => [
-      ...prev,
-      { id: Date.now(), title, deadline, done: false },
-    ]);
+  const addTask = (title: string, deadline?: string, id?: string, estimate?: number) => {
+  const newTask: Task = {
+    id: id || String(Date.now()),
+    title,
+    deadline,
+    officialDeadline: deadline, // gán lúc tạo
+    done: false,
+    estimate,
+  };
+  setTasks((prev) => [...prev, newTask]);
   };
 
-  const toggleTask = (id: number) => {
+
+  const toggleTask = (id: string) => {
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t))
     );
   };
 
-  const removeTask = (id: number) => {
+  const removeTask = (id: string) => {
     setTasks((prev) => prev.filter((t) => t.id !== id));
   };
 
+  const updateTask = (id: string, updates: Partial<Task>) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
+    );
+  };
+
   return (
-    <TasksContext.Provider value={{ tasks, addTask, toggleTask, removeTask }}>
+    <TasksContext.Provider
+      value={{ tasks, addTask, toggleTask, removeTask, updateTask }}
+    >
       {children}
     </TasksContext.Provider>
   );
 }
 
 export function useTasks() {
-  const ctx = useContext(TasksContext);
-  if (!ctx) throw new Error("useTasks must be used within a TasksProvider");
-  return ctx;
+  const context = useContext(TasksContext);
+  if (!context) throw new Error("useTasks must be used within TasksProvider");
+  return context;
 }

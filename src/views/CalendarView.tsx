@@ -15,14 +15,10 @@ const formatDate = (d: Date) => {
 const normalizeDeadline = (deadline: any) => {
   if (!deadline) return "";
 
-  // nếu đã là Date object
   if (deadline instanceof Date) return formatDate(deadline);
 
-  // nếu là string ISO (vd "2025-09-11T..."), lấy phần trước "T"
   if (typeof deadline === "string") {
     if (deadline.includes("T")) return deadline.split("T")[0];
-    // nếu đã ở dạng "YYYY-MM-DD", trả về luôn
-    // nếu là format khác (vd "11/09/2025") bạn cần parse thêm
     return deadline;
   }
 
@@ -34,14 +30,49 @@ export default function CalendarView() {
   const [date, setDate] = useState<Date>(new Date());
 
   const selectedDate = formatDate(date); // YYYY-MM-DD theo local
-  const tasksForDay = tasks.filter((t) => normalizeDeadline(t.deadline) === selectedDate);
+  const tasksForDay = tasks.filter(
+    (t) =>
+      normalizeDeadline(t.deadline) === selectedDate ||
+      normalizeDeadline(t.officialDeadline) === selectedDate
+  );
+
+  // Đếm số task theo ngày (ưu tiên officialDeadline, fallback deadline)
+  const tasksByDate: Record<string, number> = {};
+  tasks.forEach((t) => {
+    const d =
+      normalizeDeadline(t.officialDeadline) || normalizeDeadline(t.deadline);
+    if (d) tasksByDate[d] = (tasksByDate[d] || 0) + 1;
+  });
 
   return (
     <div>
       <h2>📅 Calendar</h2>
 
-      {/* Lịch */}
-      <Calendar value={date} onChange={(value) => setDate(value as Date)} />
+      {/* Lịch có đánh dấu trùng hạn */}
+      <Calendar
+        value={date}
+        onChange={(value) => setDate(value as Date)}
+        tileContent={({ date }) => {
+          const d = formatDate(date);
+          const count = tasksByDate[d] || 0;
+
+          // nếu có task thì hiện chấm, nếu >1 thì ghi số lượng
+          if (count > 0) {
+            return (
+              <div style={{ textAlign: "center", marginTop: 2 }}>
+                {count > 1 ? (
+                  <span style={{ color: "red", fontWeight: "bold" }}>
+                    {count}
+                  </span>
+                ) : (
+                  <span style={{ color: "green" }}>•</span>
+                )}
+              </div>
+            );
+          }
+          return null;
+        }}
+      />
 
       <h3 style={{ marginTop: 20 }}>
         Tasks for {selectedDate} ({tasksForDay.length})
@@ -49,8 +80,19 @@ export default function CalendarView() {
       <ul>
         {tasksForDay.length > 0 ? (
           tasksForDay.map((task) => (
-            <li key={task.id}>
-              {task.title} {task.done && "✅ Done"}
+            <li key={task.id} style={{ marginBottom: 10 }}>
+              <strong>{task.title}</strong> {task.done && "✅ Done"}
+              <div style={{ fontSize: "0.9em", color: "#555", marginLeft: 8 }}>
+                {task.deadline && (
+                  <div>⏱ Hạn thực tế: {new Date(task.deadline).toLocaleString()}</div>
+                )}
+                {task.officialDeadline && (
+                  <div>
+                    📌 Hạn chính thức:{" "}
+                    {new Date(task.officialDeadline).toLocaleString()}
+                  </div>
+                )}
+              </div>
             </li>
           ))
         ) : (
