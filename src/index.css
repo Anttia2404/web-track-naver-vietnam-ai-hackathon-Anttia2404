@@ -1,7 +1,433 @@
 * { box-sizing: border-box; }
-body { margin: 0; font-family: Inter, system-ui, Arial, sans-serif; background: #fafafa; color: #111827; }
+body { margin: 0; font-family: Inter, system-ui, Arial, sans-serif; background: white; color: #111827; }
 a { text-decoration: none; }
 html, body {
-  background-color: white !important;
-  color: black !important;
+  width: 100%;
+  height: 100%;
+}
+
+.gradient-background {
+  background: linear-gradient(300deg, #476EAE, #A7E399, #F6FF99);
+  background-size: 180% 180%;
+  animation: gradient-animation 8s ease infinite;
+
+  min-height: 100vh;
+  margin-top: 0;
+
+  display: flex;
+  justify-content: center;  /* giữa ngang */
+  align-items: flex-start;   /* bắt đầu từ trên, tránh tràn */
+  padding: 40px 20px;
+  overflow-y: auto;          /* cho phép cuộn nếu cao hơn màn hình */
+}
+
+@keyframes gradient-animation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+#root > div {
+  padding: 0 !important;  /* ép bỏ padding của div bao ngoài */
+}
+
+/* ==== Trang Calendar chia 2 bên ==== */
+.calendar-container {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  width: 95%;
+  max-width: 1200px;
+  height: 70vh;
+
+  display: flex;           /* ✅ chia 2 cột */
+  gap: 40px;                /* khoảng cách giữa 2 bên */
+  padding: 32px;
+
+  overflow: hidden;         /* tránh tràn */
+}
+
+/* Bên trái: Calendar */
+.calendar-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;       /* canh giữa */
+  justify-content: center;
+  gap: 20px;
+}
+
+.react-calendar {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+  width: 100%;
+  max-width: 500px;
+  font-family: inherit;
+}
+
+/* Bên phải: danh sách task */
+.task-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.task-panel h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.task-list-calender {
+  flex: 1;                         /* chiếm phần còn lại */
+  overflow-y: auto;                /* thanh cuộn riêng */
+  padding-right: 10px;
+}
+
+.task-list-calender li {
+  background: #f9fafb;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  list-style: none;
+}
+
+/* Thêm đường ngăn giữa 2 bên */
+.calendar-panel {
+  border-right: 1px solid #eee;
+  padding-right: 24px;
+}
+.task-panel {
+  padding-left: 24px;
+}
+
+/* Bỏ gạch chân weekday header */
+.react-calendar__month-view__weekdays__weekday abbr {
+  text-decoration: none !important;
+  cursor: default;
+}
+
+.react-calendar__tile {
+  border-radius: 30%; 
+}
+
+.react-calendar__tile--active {
+  background: #48B3AF !important; 
+}
+
+/* Ngày hôm nay (today) */
+.react-calendar__tile--now {
+  position: relative;
+  background: #F6FF99 !important; 
+  border: 2px solid #22c55e;            /* viền xanh lá */
+  color: #14532d;                       /* chữ xanh đậm */
+  font-weight: 600;
+  border-radius: 30%;                   /* bo tròn */
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.4); /* ánh sáng xung quanh */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Khi di chuột vào ngày hôm nay */
+.react-calendar__tile--now:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.6);
+}
+
+/* Nếu hôm nay cũng đang được chọn thì dùng màu chọn */
+.react-calendar__tile--now.react-calendar__tile--active {
+  background: #e11d48 !important; /* đỏ hồng */
+  color: #fff !important;
+  border: none;
+  box-shadow: 0 0 12px rgba(225, 29, 72, 0.5);
+}
+
+
+
+/* Container chính */
+.do-now-container {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  padding: 30px;
+  max-width: 80%;
+  width: 100%;
+}
+
+/* Form nhập */
+.task-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.task-form input {
+  flex: 1;
+  padding: 8px;
+}
+
+.task-form button {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.reset-btn {
+  background: #ddd;
+}
+
+/* Danh sách */
+.task-list {
+  margin-top: 20px;
+  max-height: 300px;      /* giới hạn chiều cao */
+  overflow-y: auto;       /* hiện thanh cuộn khi vượt quá */
+  padding-right: 8px;     /* tránh đè chữ vào thanh cuộn */
+}
+
+.task-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+
+.task-list span {
+  flex: 1;
+}
+
+.task-list span.done {
+  text-decoration: line-through;
+  color: #999;
+}
+
+/* Nhãn phụ */
+small {
+  margin-left: 6px;
+  opacity: 0.7;
+}
+
+small.official { color: #555; }
+small.real { color: red; }
+small.postponed { color: orange; }
+small.est { color: blue; }
+small.actual { color: green; }
+
+.delete-btn {
+  color: red;
+}
+
+.done-btn {
+  color: green;
+}
+
+button {
+  border-radius: 5px;
+  border: none;               /* ❌ bỏ viền mặc định */
+  outline: none; 
+}
+
+button:hover {
+  background-color: #a8c2f6; /* đổi màu khi hover */
+}
+
+.delete-btn:hover {
+  color: white;
+  background-color: red;
+}
+
+.done-btn:hover {
+  color: white;
+  background-color: green;
+}
+
+.task-actions {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.task-item:hover .task-actions {
+  opacity: 1;
+}
+
+/* ==== Navbar ==== */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+
+  padding: 14px 28px;
+  background: #ffffff;
+  border-bottom: 1px solid #eee;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: 80px;
+}
+
+.navbar-logo {
+  font-weight: 800;
+  font-size: 2rem;
+  color: #1f2937; /* xám đậm */
+}
+
+.navbar-links {
+  display: flex;
+  gap: 24px;
+}
+
+.nav-link {
+  color: #4b5563; /* xám */
+  font-weight: 500;
+  text-decoration: none;
+  position: relative;
+  padding-bottom: 4px;
+  transition: color 0.2s ease;
+}
+
+.nav-link:hover {
+  color: #1d4ed8; /* xanh dương đậm */
+}
+
+.nav-link.active {
+  color: #e11d48; /* đỏ hồng */
+  font-weight: 700;
+}
+
+.nav-link.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  background: #e11d48;
+  border-radius: 2px;
+}
+
+/* ==== Analytics Dashboard 2x2 ==== */
+.analytics-container {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+
+  width: 95%;
+  max-width: 80vw;
+  height: 70vh;                /* vừa khít màn hình nhưng vẫn thở */
+  padding: 24px;
+
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 2 cột */
+  grid-template-rows: auto 1fr 1fr;      /* hàng 1 là title, sau đó 2 hàng chart */
+  gap: 24px;
+
+  box-sizing: border-box;
+  overflow: hidden;            /* tránh tràn ra ngoài */
+}
+
+.analytics-container > h2 {
+  grid-column: span 2;         /* chiếm cả 2 cột */
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #f3f4f6; /* gạch nhạt dưới tiêu đề */
+}
+
+.analytics-container > div {
+  background: #fafafa;
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.analytics-container > div h3 {
+  text-align: center;
+  margin-bottom: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  flex-shrink: 0;
+}
+
+.notification {
+  position: relative;
+  cursor: pointer;
+}
+
+.badge {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  background: red;
+  color: white;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 50%;
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 250px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-top: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  z-index: 999;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.dropdown-header {
+  font-weight: bold;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+}
+
+.dropdown-item {
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+}
+
+.dropdown-item.overdue {
+  color: #d32f2f;
+}
+
+.dropdown-item.due-now {
+  color: #1976d2;
+}
+
+.clear-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: none;
+  background: #ef4444;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.clear-btn:hover {
+  background: #dc2626;
 }

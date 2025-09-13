@@ -60,68 +60,67 @@ export default function CalendarView() {
   });
 
   return (
-    <div>
-      <h2>📅 Calendar</h2>
+  <div className="gradient-background">
+    <div className="calendar-container">
+      <div className="calendar-panel">
+        <h2 className="calender-h2" style = {{margin: 0}}>Calendar</h2>
+        <Calendar
+          value={date}
+          onChange={(value) => setDate(value as Date)}
+          tileContent={({ date }) => {
+            const d = formatDate(date);
+            const count = tasksByDate[d] || 0;
 
-      <Calendar
-        value={date}
-        onChange={(value) => setDate(value as Date)}
-        tileContent={({ date }) => {
-          const d = formatDate(date);
-          const count = tasksByDate[d] || 0;
-
-          if (count > 0) {
             return (
-              <div style={{ textAlign: "center", marginTop: 2 }}>
+              <div style={{ textAlign: "center", marginTop: 2, minHeight: 16 }}>
                 {count > 1 ? (
-                  <span style={{ color: "red", fontWeight: "bold" }}>
-                    {count}
-                  </span>
-                ) : (
+                  <span style={{ color: "red", fontWeight: "bold" }}>{count}</span>
+                ) : count === 1 ? (
                   <span style={{ color: "green" }}>•</span>
+                ) : (
+                  <span style={{ opacity: 0 }}>0</span>  // giữ chỗ để canh hàng
                 )}
               </div>
             );
-          }
-          return null;
-        }}
-      />
+          }}
+        />
+      </div>
 
-      <h3 style={{ marginTop: 20 }}>
-        Tasks for {selectedDate} ({tasksForDay.length})
-      </h3>
-      <ul>
-        {tasksForDay.length > 0 ? (
-          tasksForDay.map((task) => {
-            const realDeadline = getRealDeadline(task);
-
-            return (
-              <li key={task.id} style={{ marginBottom: 10 }}>
-                <strong>{task.title}</strong> {task.done && "✅ Done"}
-                <div style={{ fontSize: "0.9em", marginLeft: 8 }}>
-                  {/* Hạn thực tế */}
-                  {realDeadline && (
-                    <div style={{ color: "green" }}>
-                      ⏱ Hạn thực tế:{" "}
-                      {new Date(realDeadline).toLocaleString()}
-                    </div>
-                  )}
-
-                  {/* Hạn chính thức */}
-                  {task.officialDeadline && (
-                    <div style={{ color: "red" }}>
-                      📌 Hạn chính thức:{" "}
-                      {new Date(task.officialDeadline).toLocaleString()}
-                    </div>
-                  )}
-                </div>
-              </li>
-            );
-          })
-        ) : (
-          <p>No tasks for this day.</p>
-        )}
-      </ul>
+      <div className="task-panel">
+        <h3>
+          Công việc cho ngày {selectedDate} ({tasksForDay.length})
+        </h3>
+        <ul className="task-list-calender">
+          {tasksForDay.length > 0 ? (
+            tasksForDay.map((task) => {
+              const realDeadline = getRealDeadline(task);
+              return (
+                <li key={task.id} style={{ marginBottom: 10 }}>
+                  <strong>{task.title}</strong> {task.done && "✅ Done"}
+                  <div style={{ fontSize: "0.9em", marginLeft: 8 }}>
+                    {realDeadline && (
+                      <div style={{ color: "green" }}>
+                        Hạn thực tế:{" "}
+                        {new Date(realDeadline).toLocaleString()}
+                      </div>
+                    )}
+                    {task.officialDeadline && (
+                      <div style={{ color: "red" }}>
+                        Hạn chính thức:{" "}
+                        {new Date(task.officialDeadline).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                </li>
+              );
+            })
+          ) : (
+            <p style = {{display: "flex", justifyContent: "center"}}>Không có công việc cho hôm nay.</p>
+          )}
+        </ul>
+      </div>
     </div>
-  );
+  </div>
+);
+
 }

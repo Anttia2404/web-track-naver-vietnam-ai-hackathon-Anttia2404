@@ -95,20 +95,20 @@ export default function AnalyticsView() {
   }));
 
   return (
-    <div>
-      <h2>📊 Analytics</h2>
+    <div className="gradient-background">
+      <div className="analytics-container">
+        <h2>Analytics</h2>
 
-      <div style={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
         {/* Pie Chart */}
-        <div style={{ width: 300, height: 300 }}>
+        <div>
           <h3>Task Status</h3>
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={pieData}
                 cx="50%"
                 cy="50%"
-                outerRadius={100}
+                outerRadius="70%"
                 dataKey="value"
                 label
               >
@@ -122,9 +122,9 @@ export default function AnalyticsView() {
         </div>
 
         {/* Tasks by Deadline */}
-        <div style={{ width: 400, height: 300 }}>
+        <div>
           <h3>Tasks by Deadline</h3>
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
@@ -136,9 +136,9 @@ export default function AnalyticsView() {
         </div>
 
         {/* Productivity Over Time */}
-        <div style={{ width: 400, height: 300 }}>
+        <div>
           <h3>Productivity Over Time</h3>
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={productivityData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
@@ -150,9 +150,9 @@ export default function AnalyticsView() {
         </div>
 
         {/* Best Work Hours */}
-        <div style={{ width: 500, height: 300 }}>
+        <div>
           <h3>Best Work Hours</h3>
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={hoursData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="hour" />

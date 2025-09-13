@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTasks } from "../context/TasksContext";
+import "../index.css"
 
 interface MetaData {
   start?: number;
@@ -10,7 +11,7 @@ export default function DoNowView() {
   const { tasks, addTask, toggleTask, removeTask } = useTasks();
   const [title, setTitle] = useState("");
   const [officialDeadline, setOfficialDeadline] = useState("");
-  const [estimatedMinutes, setEstimatedMinutes] = useState<number>(30);
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number | "">(""); // 👈 cho phép rỗng để placeholder hiện
   const [history, setHistory] = useState<Record<string, number>>({});
   const [meta, setMeta] = useState<Record<string, MetaData>>({});
   const [sortedTasks, setSortedTasks] = useState(tasks);
@@ -28,7 +29,7 @@ export default function DoNowView() {
         if (delay > 0) delays.push(delay);
       }
     }
-    if (delays.length === 0) return 15; // mặc định 15 phút
+    if (delays.length === 0) return 15;
     return Math.round(delays.reduce((a, b) => a + b, 0) / delays.length);
   }
 
@@ -68,7 +69,12 @@ export default function DoNowView() {
     if (!title.trim()) return;
 
     const newId = String(Date.now());
-    addTask(title, officialDeadline || undefined, estimatedMinutes, newId);
+    addTask(
+      title,
+      officialDeadline || undefined,
+      estimatedMinutes === "" ? 30 : estimatedMinutes, // 👈 nếu trống thì mặc định 30
+      newId
+    );
 
     setMeta((prev) => ({
       ...prev,
@@ -79,17 +85,13 @@ export default function DoNowView() {
 
     setTitle("");
     setOfficialDeadline("");
-    setEstimatedMinutes(30);
+    setEstimatedMinutes(""); // 👈 reset để hiện placeholder lại
   };
 
-  // reset history khi rời view
   useEffect(() => {
     return () => setHistory({});
   }, []);
 
-  // =========================
-  //  Toggle task
-  // =========================
   const handleToggle = (id: string) => {
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
@@ -117,9 +119,6 @@ export default function DoNowView() {
     toggleTask(id);
   };
 
-  // =========================
-  //  Notification
-  // =========================
   useEffect(() => {
     if (Notification.permission !== "granted") {
       Notification.requestPermission();
@@ -151,94 +150,98 @@ export default function DoNowView() {
   }, [tasks, meta]);
 
   return (
-    <div>
-      <h2>📌 Do Now (AI prioritized + Time Tracking + Reminder)</h2>
+    <div className="gradient-background">
+      <div className="do-now-container">
+        <h2 style = {{display: "flex", justifyContent: "center"}}>Do Now</h2>
+        <form onSubmit={handleSubmit} className="task-form">
+          <input
+            type="text"
+            placeholder="Tiêu đề công việc..."
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+          <input
+            type="datetime-local"
+            value={officialDeadline}
+            onChange={(e) => setOfficialDeadline(e.target.value)}
+          />
+          <input
+            type="number"
+            min={1}
+            value={estimatedMinutes}
+            onChange={(e) =>
+              setEstimatedMinutes(
+                e.target.value === "" ? "" : Number(e.target.value)
+              )
+            }
+            placeholder="Thời gian thực hiện (phút)..." // 👈 placeholder rõ nghĩa
+          />
+          <button type="submit">Thêm nhiệm vụ</button>
+          {/* <button
+            type="button"
+            onClick={() => setHistory({})}
+            className="reset-btn"
+          >
+            Reset postponed
+          </button> khi nào cần reset lại */}
+        </form>
 
-      <form onSubmit={handleSubmit} style={{ marginBottom: 20 }}>
-        <input
-          type="text"
-          placeholder="Task title..."
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          style={{ marginRight: 10 }}
-        />
-        <input
-          type="datetime-local"
-          value={officialDeadline}
-          onChange={(e) => setOfficialDeadline(e.target.value)}
-          style={{ marginRight: 10 }}
-        />
-        <input
-          type="number"
-          min={1}
-          value={estimatedMinutes}
-          onChange={(e) => setEstimatedMinutes(Number(e.target.value))}
-          style={{ width: 80, marginRight: 10 }}
-          placeholder="min"
-        />
-        <button type="submit">Add Task</button>
-        <button
-          type="button"
-          onClick={() => setHistory({})}
-          style={{ marginLeft: 10 }}
-        >
-          Reset
-        </button>
-      </form>
+        <ul className="task-list">
+          {sortedTasks.map((task) => {
+            const m = meta[task.id];
+            return (
+              <li key={task.id} className="task-item">
+                <span className={task.done ? "done" : ""}>
+                  {task.title}
+                  {task.officialDeadline && (
+                    <small className="official">
+                      chính thức:{" "}
+                      {new Date(task.officialDeadline).toLocaleString()}
+                    </small>
+                  )}
+                  {task.realDeadline && (
+                    <small className="real">
+                      thực tế:{" "}
+                      {new Date(task.realDeadline).toLocaleString()}
+                    </small>
+                  )}
+                  {history[task.id] > 0 && (
+                    <small className="postponed">
+                      (postponed {history[task.id]}x)
+                    </small>
+                  )}
+                  {task.estimatedMinutes && (
+                    <small className="est">
+                      est: {task.estimatedMinutes}m
+                    </small>
+                  )}
+                  {m?.actual !== undefined && (
+                    <small className="actual">actual: {m.actual}m</small>
+                  )}
+                </span>
 
-      <ul>
-        {sortedTasks.map((task) => {
-          const m = meta[task.id];
-
-          return (
-            <li key={task.id} style={{ marginBottom: 8 }}>
-              <span
-                style={{
-                  textDecoration: task.done ? "line-through" : "none",
-                  marginRight: 10,
-                }}
-              >
-                {task.title}
-                {task.officialDeadline && (
-                  <small style={{ marginLeft: 6, color: "#888" }}>
-                    🕒 chính thức:{" "}
-                    {new Date(task.officialDeadline).toLocaleString()}
-                  </small>
-                )}
-                {task.realDeadline && (
-                  <small style={{ marginLeft: 6, color: "red" }}>
-                    ⏳ thực tế: {new Date(task.realDeadline).toLocaleString()}
-                  </small>
-                )}
-                {history[task.id] > 0 && (
-                  <small style={{ marginLeft: 6, color: "orange" }}>
-                    (postponed {history[task.id]}x)
-                  </small>
-                )}
-                {task.estimatedMinutes && (
-                  <small style={{ marginLeft: 6, color: "blue" }}>
-                    est: {task.estimatedMinutes}m
-                  </small>
-                )}
-                {m?.actual !== undefined && (
-                  <small style={{ marginLeft: 6, color: "green" }}>
-                    actual: {m.actual}m
-                  </small>
-                )}
-              </span>
-              <button onClick={() => handleToggle(task.id)}>
-                {task.done ? "Undo" : "Done"}
-              </button>
-              <button
-                onClick={() => removeTask(task.id)}
-                style={{ marginLeft: 6, color: "red" }}
-              >
-                Delete
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+                {/* 👇 bọc 2 nút vào đây */}
+                <div className="task-actions">
+                  <button
+                    onClick={() => handleToggle(task.id)}
+                    style={{ marginRight: 10, padding: 5 }}
+                    className="done-btn"
+                  >
+                    {task.done ? "Hoàn tác" : "Hoàn thành"}
+                  </button>
+                  <button
+                    onClick={() => removeTask(task.id)}
+                    className="delete-btn"
+                    style={{ padding: 5 }}
+                  >
+                    Xóa
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </div>
   );
 }
