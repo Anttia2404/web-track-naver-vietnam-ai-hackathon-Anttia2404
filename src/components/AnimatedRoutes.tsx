@@ -1,41 +1,51 @@
 // src/components/AnimatedRoutes.tsx
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import type { Variants } from "framer-motion";
+
 
 import DoNowView from "../views/DoNowView";
 import CalendarView from "../views/CalendarView";
 import AnalyticsView from "../views/AnalyticsView";
 
+// Thứ tự route để tính hướng
 const routesOrder: Record<string, number> = {
   "/do-now": 0,
   "/calendar": 1,
   "/analytics": 2,
 };
 
-const variants = {
-  initial: (dir: number) => ({
-    x: dir > 0 ? 100 : -100,
+// Variants animation: slide + fade
+const variants: Variants = {
+  initial: (direction: number) => ({
+    x: direction > 0 ? 100 : -100,
     opacity: 0,
-    position: "absolute" as const, // ✅ giữ layout, chồng lên
+    position: "absolute",
     width: "100%",
+    height: "100%",
   }),
   animate: {
     x: 0,
     opacity: 1,
+    position: "absolute",
+    width: "100%",
+    height: "100%",
     transition: {
-      duration: 0.4,
-      ease: [0.4, 0, 0.2, 1] as [number, number, number, number],
+      duration: 0.2,
+      ease: [0.42, 0, 0.58, 1],
     },
-    position: "absolute" as const,
-    width: "100%",
   },
-  exit: (dir: number) => ({
-    x: dir > 0 ? -100 : 100,
+  exit: (direction: number) => ({
+    x: direction > 0 ? -100 : 100,
     opacity: 0,
-    transition: { duration: 0.4 },
-    position: "absolute" as const,
+    position: "absolute",
     width: "100%",
+    height: "100%",
+    transition: {
+      duration: 0.2,
+      ease: [0.42, 0, 0.58, 1],
+    },
   }),
 };
 
@@ -46,60 +56,30 @@ const AnimatedRoutes: React.FC = () => {
   const currentIndex = routesOrder[location.pathname] ?? 0;
   const direction = currentIndex > prevIndex.current ? 1 : -1;
 
-  console.log("Prev:", prevIndex.current, "Current:", currentIndex, "Dir:", direction);
-  prevIndex.current = currentIndex;
+  // Cập nhật prevIndex sau render để AnimatePresence nhận đúng direction
+  useEffect(() => {
+    prevIndex.current = currentIndex;
+  }, [currentIndex]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <AnimatePresence mode="wait" custom={direction}>
-        <Routes location={location} key={location.pathname}>
-          <Route path="/" element={<Navigate to="/do-now" replace />} />
-
-          <Route
-            path="/do-now"
-            element={
-              <motion.div
-                variants={variants}
-                custom={direction}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-              >
-                <DoNowView />
-              </motion.div>
-            }
-          />
-
-          <Route
-            path="/calendar"
-            element={
-              <motion.div
-                variants={variants}
-                custom={direction}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-              >
-                <CalendarView />
-              </motion.div>
-            }
-          />
-
-          <Route
-            path="/analytics"
-            element={
-              <motion.div
-                variants={variants}
-                custom={direction}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-              >
-                <AnalyticsView />
-              </motion.div>
-            }
-          />
-        </Routes>
+      <AnimatePresence mode="wait" initial={false} custom={direction}>
+        <motion.div
+          key={location.pathname} // key khác nhau cho mỗi route
+          variants={variants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          custom={direction} // Framer Motion sẽ truyền direction vào variants
+          style={{ position: "absolute", width: "100%", height: "100%" }}
+        >
+          <Routes location={location}>
+            <Route path="/" element={<Navigate to="/do-now" replace />} />
+            <Route path="/do-now" element={<DoNowView />} />
+            <Route path="/calendar" element={<CalendarView />} />
+            <Route path="/analytics" element={<AnalyticsView />} />
+          </Routes>
+        </motion.div>
       </AnimatePresence>
     </div>
   );
