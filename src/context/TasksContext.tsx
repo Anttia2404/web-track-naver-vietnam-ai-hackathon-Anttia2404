@@ -6,6 +6,7 @@ import {
 } from "react";
 
 import type { ReactNode } from "react";
+import recommendTasksAI from "../untils/recommendTasksAI";
 
 // ======================
 // Task model
@@ -31,6 +32,14 @@ interface TasksContextType {
   toggleTask: (id: string) => void;
   removeTask: (id: string) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
+
+  // 🆕 AI recommend
+  recommendedTasks: Task[];
+  reason: string;
+  fetchRecommendedTasks: (mood: string) => Promise<void>;
+
+  // 🆗 giữ local suggest (fallback)
+  suggestTasksForMood: (mood: string) => Task[];
 }
 
 // ======================
@@ -43,6 +52,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem("tasks");
     return saved ? JSON.parse(saved) : [];
   });
+
+  const [recommendedTasks, setRecommendedTasks] = useState<Task[]>([]);
+  const [reason, setReason] = useState("");
 
   useEffect(() => {
     localStorage.setItem("tasks", JSON.stringify(tasks));
@@ -89,7 +101,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           ? {
               ...task,
               done: !task.done,
-              doneAt: !task.done ? new Date().toISOString() : undefined, // set khi done, xóa khi undo
+              doneAt: !task.done ? new Date().toISOString() : undefined,
             }
           : task
       )
@@ -113,7 +125,6 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
         const updated = { ...t, ...updates };
 
-        // Nếu có thay đổi officialDeadline hoặc estimatedMinutes → tính lại realDeadline
         if (updated.officialDeadline && updated.estimatedMinutes) {
           const od = new Date(updated.officialDeadline).getTime();
           const defaultDelay = 15;
@@ -127,9 +138,64 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  // ======================
+  // 🆕 Gọi AI để recommend
+  // ======================
+  const fetchRecommendedTasks = async (mood: string) => {
+    try {
+      const result = await recommendTasksAI(mood, tasks);
+      const map = new Map(tasks.map((t) => [t.id, t]));
+
+      const ordered = result.recommended
+        .map((id: string) => map.get(id))
+        .filter(Boolean) as Task[];
+
+      setRecommendedTasks(ordered);
+      setReason(result.reason || "");
+    } catch (err) {
+      console.error("AI recommend error", err);
+      setRecommendedTasks([]);
+      setReason("AI recommend failed");
+    }
+  };
+
+  // ======================
+  // Local fallback
+  // ======================
+  const suggestTasksForMood = (mood: string): Task[] => {
+    if (!tasks.length) return [];
+
+    switch (mood) {
+      case "lazy":
+        return tasks.filter((t) => !t.done && (t.estimatedMinutes || 0) <= 30);
+      case "focus":
+        return tasks.filter((t) => !t.done && (t.estimatedMinutes || 0) > 60);
+      case "stress":
+        return tasks.filter(
+          (t) =>
+            !t.done &&
+            t.officialDeadline &&
+            new Date(t.officialDeadline).getTime() - Date.now() <
+              2 * 60 * 60 * 1000
+        );
+      default:
+        return tasks.filter((t) => !t.done);
+    }
+  };
+
   return (
     <TasksContext.Provider
-      value={{ tasks, addTask, toggleTask, removeTask, updateTask }}
+      value={{
+        tasks,
+        addTask,
+        toggleTask,
+        removeTask,
+        updateTask,
+        recommendedTasks,
+        reason,
+        fetchRecommendedTasks,
+        suggestTasksForMood,
+      }}
     >
       {children}
     </TasksContext.Provider>

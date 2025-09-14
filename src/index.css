@@ -144,7 +144,7 @@ html, body {
 
 /* Nếu hôm nay cũng đang được chọn thì dùng màu chọn */
 .react-calendar__tile--now.react-calendar__tile--active {
-  background: #e11d48 !important; /* đỏ hồng */
+  background: rgb(102, 213, 156) !important; /* đỏ hồng */
   color: #fff !important;
   border: none;
   box-shadow: 0 0 12px rgba(225, 29, 72, 0.5);

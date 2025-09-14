@@ -1,24 +1,60 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTasks } from "../context/TasksContext";
-import "../index.css"
+import "../index.css";
 
 interface MetaData {
   start?: number;
-  actual?: number;   // phút
+  actual?: number; // phút
 }
 
 export default function DoNowView() {
-  const { tasks, addTask, toggleTask, removeTask } = useTasks();
+  const {
+    tasks,
+    addTask,
+    toggleTask,
+    removeTask,
+    suggestTasksForMood,
+    recommendedTasks,
+    reason,
+    fetchRecommendedTasks,
+  } = useTasks();
+
   const [title, setTitle] = useState("");
   const [officialDeadline, setOfficialDeadline] = useState("");
-  const [estimatedMinutes, setEstimatedMinutes] = useState<number | "">(""); // 👈 cho phép rỗng để placeholder hiện
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number | "">("");
   const [history, setHistory] = useState<Record<string, number>>({});
   const [meta, setMeta] = useState<Record<string, MetaData>>({});
   const [sortedTasks, setSortedTasks] = useState(tasks);
 
-  // =========================
-  //  Average delay
-  // =========================
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "pending" | "done"
+  >("all");
+
+  // 🆕 Mood state (user chọn)
+  const [mood, setMood] = useState("all");
+
+  // 🆕 Gọi AI khi mood thay đổi
+  useEffect(() => {
+    if (mood !== "all") {
+      fetchRecommendedTasks(mood);
+    }
+  }, [mood, fetchRecommendedTasks]);
+
+  // 🆕 Pagination
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  const handleStart = (id: string) => {
+    setMeta((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        start: Date.now(),
+      },
+    }));
+  };
+
   function getAverageDelay(): number {
     const delays: number[] = [];
     for (const id in meta) {
@@ -33,9 +69,6 @@ export default function DoNowView() {
     return Math.round(delays.reduce((a, b) => a + b, 0) / delays.length);
   }
 
-  // =========================
-  //  Sort tasks
-  // =========================
   useEffect(() => {
     const now = Date.now();
     const sorted = [...tasks].sort((a, b) => {
@@ -61,9 +94,6 @@ export default function DoNowView() {
     setSortedTasks(sorted);
   }, [tasks, history]);
 
-  // =========================
-  //  Add task
-  // =========================
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -72,7 +102,7 @@ export default function DoNowView() {
     addTask(
       title,
       officialDeadline || undefined,
-      estimatedMinutes === "" ? 30 : estimatedMinutes, // 👈 nếu trống thì mặc định 30
+      estimatedMinutes === "" ? 30 : estimatedMinutes,
       newId
     );
 
@@ -85,7 +115,7 @@ export default function DoNowView() {
 
     setTitle("");
     setOfficialDeadline("");
-    setEstimatedMinutes(""); // 👈 reset để hiện placeholder lại
+    setEstimatedMinutes("");
   };
 
   useEffect(() => {
@@ -149,10 +179,43 @@ export default function DoNowView() {
     return () => clearInterval(interval);
   }, [tasks, meta]);
 
+  // 🆕 Chọn danh sách hiển thị
+  const visibleTasks = useMemo(() => {
+    let baseList =
+      mood !== "all"
+        ? recommendedTasks.length > 0
+          ? recommendedTasks // ưu tiên danh sách AI recommend
+          : suggestTasksForMood(mood) // fallback local
+        : tasks;
+
+    const filtered = baseList.filter((t) => {
+      const matchTitle = t.title
+        .toLowerCase()
+        .includes(search.toLowerCase());
+      const matchStatus =
+        filterStatus === "all" ||
+        (filterStatus === "done" && t.done) ||
+        (filterStatus === "pending" && !t.done);
+
+      return matchTitle && matchStatus;
+    });
+
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [tasks, mood, recommendedTasks, search, filterStatus, page]);
+
+
   return (
     <div className="gradient-background">
       <div className="do-now-container">
-        <h2 style = {{display: "flex", justifyContent: "center"}}>Do Now</h2>
+        <h2 style={{ display: "flex", justifyContent: "center" }}>Do Now</h2>
+        {/* 🆕 Nếu có lý do từ AI thì show */}
+        {mood !== "all" && reason && (
+          <p style={{ textAlign: "center", fontStyle: "italic" }}>
+            🤖 Gợi ý AI ({mood}): {reason}
+          </p>
+        )}
+        {/* Thanh thêm task */}
         <form onSubmit={handleSubmit} className="task-form">
           <input
             type="text"
@@ -174,20 +237,47 @@ export default function DoNowView() {
                 e.target.value === "" ? "" : Number(e.target.value)
               )
             }
-            placeholder="Thời gian thực hiện (phút)..." // 👈 placeholder rõ nghĩa
+            placeholder="Thời gian thực hiện (phút)..."
           />
           <button type="submit">Thêm nhiệm vụ</button>
-          {/* <button
-            type="button"
-            onClick={() => setHistory({})}
-            className="reset-btn"
-          >
-            Reset postponed
-          </button> khi nào cần reset lại */}
         </form>
 
+        {/* Thanh tìm kiếm + lọc + mood */}
+        <div
+          className="filter-bar"
+          style={{ display: "flex", gap: "8px", margin: "12px 0" }}
+        >
+          <input
+            type="text"
+            placeholder="Tìm kiếm nhiệm vụ..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ flex: 1, padding: "6px" }}
+          />
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as any)}
+            style={{ padding: "6px" }}
+          >
+            <option value="all">Tất cả</option>
+            <option value="pending">Đang chờ</option>
+            <option value="done">Hoàn thành</option>
+          </select>
+          <select
+            value={mood}
+            onChange={(e) => setMood(e.target.value)}
+            style={{ padding: "6px" }}
+          >
+            <option value="all">Mood: bất kỳ</option>
+            <option value="lazy">😴 Lười</option>
+            <option value="focus">🎯 Tập trung</option>
+            <option value="stress">😰 Căng thẳng</option>
+          </select>
+        </div>
+
+        {/* Danh sách task */}
         <ul className="task-list">
-          {sortedTasks.map((task) => {
+          {visibleTasks.map((task) => {
             const m = meta[task.id];
             return (
               <li key={task.id} className="task-item">
@@ -195,33 +285,28 @@ export default function DoNowView() {
                   {task.title}
                   {task.officialDeadline && (
                     <small className="official">
-                      chính thức:{" "}
-                      {new Date(task.officialDeadline).toLocaleString()}
-                    </small>
-                  )}
-                  {task.realDeadline && (
-                    <small className="real">
-                      thực tế:{" "}
-                      {new Date(task.realDeadline).toLocaleString()}
-                    </small>
-                  )}
-                  {history[task.id] > 0 && (
-                    <small className="postponed">
-                      (postponed {history[task.id]}x)
+                      chính thức: {new Date(task.officialDeadline).toLocaleString()}
                     </small>
                   )}
                   {task.estimatedMinutes && (
-                    <small className="est">
-                      est: {task.estimatedMinutes}m
-                    </small>
+                    <small className="est">est: {task.estimatedMinutes}m</small>
                   )}
                   {m?.actual !== undefined && (
                     <small className="actual">actual: {m.actual}m</small>
                   )}
                 </span>
 
-                {/* 👇 bọc 2 nút vào đây */}
                 <div className="task-actions">
+                  {!task.done && (
+                    <button
+                      onClick={() => handleStart(task.id)}
+                      style={{ marginRight: 10, padding: 5 }}
+                      className="start-btn"
+                    >
+                      Bắt đầu
+                    </button>
+                  )}
+
                   <button
                     onClick={() => handleToggle(task.id)}
                     style={{ marginRight: 10, padding: 5 }}
@@ -229,6 +314,7 @@ export default function DoNowView() {
                   >
                     {task.done ? "Hoàn tác" : "Hoàn thành"}
                   </button>
+
                   <button
                     onClick={() => removeTask(task.id)}
                     className="delete-btn"
@@ -241,6 +327,30 @@ export default function DoNowView() {
             );
           })}
         </ul>
+
+        {/* 🆕 Pagination controls */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: "8px",
+            marginTop: "12px",
+          }}
+        >
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            Trang trước
+          </button>
+          <span>Trang {page}</span>
+          <button
+            onClick={() => setPage((p) => p + 1)}
+            disabled={visibleTasks.length < pageSize}
+          >
+            Trang sau
+          </button>
+        </div>
       </div>
     </div>
   );

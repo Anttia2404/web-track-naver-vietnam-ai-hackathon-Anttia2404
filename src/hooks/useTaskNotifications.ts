@@ -11,7 +11,7 @@ export default function useTaskNotifications() {
 
     const interval = setInterval(() => {
       const now = Date.now();
-      const avgDelay = 0; // có thể thay bằng giá trị thật nếu cần
+      const avgDelay = 15; // có thể thay bằng giá trị thật nếu cần
 
       tasks.forEach((t) => {
         if (!t.officialDeadline || t.done) return;
@@ -28,7 +28,7 @@ export default function useTaskNotifications() {
           });
         }
       });
-    }, 1000); //Số thời gian nhác lại
+    }, 60_000); //Số thời gian nhác lại
 
     return () => clearInterval(interval);
   }, [tasks]);
