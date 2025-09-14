@@ -180,29 +180,31 @@ export default function DoNowView() {
   }, [tasks, meta]);
 
   // 🆕 Chọn danh sách hiển thị
-  const visibleTasks = useMemo(() => {
-    let baseList =
-      mood !== "all"
-        ? recommendedTasks.length > 0
-          ? recommendedTasks // ưu tiên danh sách AI recommend
-          : suggestTasksForMood(mood) // fallback local
-        : tasks;
+  // 🆕 Chọn danh sách hiển thị
+const visibleTasks = useMemo(() => {
+  let baseList =
+    mood !== "all"
+      ? recommendedTasks.length > 0
+        ? recommendedTasks
+        : suggestTasksForMood(mood)
+      : sortedTasks; // ✅ dùng sortedTasks thay vì tasks
 
-    const filtered = baseList.filter((t) => {
-      const matchTitle = t.title
-        .toLowerCase()
-        .includes(search.toLowerCase());
-      const matchStatus =
-        filterStatus === "all" ||
-        (filterStatus === "done" && t.done) ||
-        (filterStatus === "pending" && !t.done);
+  const filtered = baseList.filter((t) => {
+    const matchTitle = t.title
+      .toLowerCase()
+      .includes(search.toLowerCase());
+    const matchStatus =
+      filterStatus === "all" ||
+      (filterStatus === "done" && t.done) ||
+      (filterStatus === "pending" && !t.done);
 
-      return matchTitle && matchStatus;
-    });
+    return matchTitle && matchStatus;
+  });
 
-    const start = (page - 1) * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [tasks, mood, recommendedTasks, search, filterStatus, page]);
+  const start = (page - 1) * pageSize;
+  return filtered.slice(start, start + pageSize);
+}, [sortedTasks, mood, recommendedTasks, search, filterStatus, page]);
+
 
 
   return (
