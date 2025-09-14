@@ -1,9 +1,12 @@
-// api/ai-recommend.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== "POST") return res.status(405).send("Method not allowed");
-  const { tasks, mood } = req.body; // mood: "lazy" | "focus" | "stress" | "all"
+  if (req.method !== "POST")
+    return res.status(405).send("Method not allowed");
+
+  const { tasks, mood } = req.body;
+
+  console.log("🟢 Incoming request body:", req.body);
 
   if (!tasks || !Array.isArray(tasks) || !mood) {
     return res.status(400).json({ error: "tasks and mood required" });
@@ -55,7 +58,6 @@ Format JSON:
     console.log("🔍 AI raw response:", text);
 
     try {
-      // Lọc phần JSON trong text (tìm {...})
       const match = text.match(/\{[\s\S]*\}/);
       if (!match) throw new Error("No JSON found in AI response");
 
@@ -66,7 +68,7 @@ Format JSON:
       return res.status(200).json({
         recommended: [],
         reason: "AI recommend failed",
-        raw: text, // để bạn xem AI trả về gì
+        raw: text,
       });
     }
   } catch (err: any) {
