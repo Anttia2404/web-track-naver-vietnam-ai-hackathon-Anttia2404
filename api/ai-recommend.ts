@@ -1,11 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== "POST")
-    return res.status(405).send("Method not allowed");
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
   const { tasks, mood } = req.body;
-
   console.log("🟢 Incoming request body:", req.body);
 
   if (!tasks || !Array.isArray(tasks) || !mood) {
@@ -50,6 +50,12 @@ Format JSON:
     });
 
     const data = await r.json();
+
+    if (data.error) {
+      console.error("❌ OpenAI API error:", data.error);
+      return res.status(500).json({ error: data.error.message });
+    }
+
     const text =
       data?.choices?.[0]?.message?.content ??
       data?.choices?.[0]?.text ??
@@ -72,7 +78,7 @@ Format JSON:
       });
     }
   } catch (err: any) {
-    console.error("❌ OpenAI API error:", err);
+    console.error("❌ Server error:", err);
     return res
       .status(500)
       .json({ error: "OpenAI request failed", detail: err.message });
