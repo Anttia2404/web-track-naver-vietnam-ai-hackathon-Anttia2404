@@ -2,11 +2,12 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import OpenAI from "openai";
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY!,
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log("Key loaded?", process.env.OPENAI_API_KEY ? "YES" : "NO");
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -38,35 +39,17 @@ Format JSON:
 }`;
 
   try {
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: "Bạn là trợ lý ưu tiên công việc." },
-          { role: "user", content: prompt },
-        ],
-        max_tokens: 400,
-        temperature: 0.6,
-      }),
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "Bạn là trợ lý ưu tiên công việc." },
+        { role: "user", content: prompt },
+      ],
+      max_tokens: 400,
+      temperature: 0.6,
     });
 
-    const data = await r.json();
-
-    if (data.error) {
-      console.error("OpenAI API error:", data.error);
-      return res.status(500).json({ error: data.error.message });
-    }
-
-    const text =
-      data?.choices?.[0]?.message?.content ??
-      data?.choices?.[0]?.text ??
-      "";
-
+    const text = completion.choices[0]?.message?.content ?? "";
     console.log("🔍 AI raw response:", text);
 
     try {
