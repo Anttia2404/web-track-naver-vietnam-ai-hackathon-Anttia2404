@@ -6,13 +6,13 @@ const client = new OpenAI({
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  console.log("🔑 Key loaded?", process.env.OPENAI_API_KEY ? "YES" : "NO");
+  console.log("Key loaded?", process.env.OPENAI_API_KEY ? "YES" : "NO");
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   const { tasks, mood } = req.body;
-  console.log("🟢 Incoming request body:", req.body);
+  console.log("Incoming request body:", req.body);
 
   if (!tasks || !Array.isArray(tasks) || !mood) {
     return res.status(400).json({ error: "tasks and mood required" });
@@ -58,7 +58,7 @@ Format JSON:
     const data = await r.json();
 
     if (data.error) {
-      console.error("❌ OpenAI API error:", data.error);
+      console.error("OpenAI API error:", data.error);
       return res.status(500).json({ error: data.error.message });
     }
 
@@ -76,7 +76,7 @@ Format JSON:
       const json = JSON.parse(match[0]);
       return res.status(200).json(json);
     } catch (err) {
-      console.error("❌ JSON parse error:", err);
+      console.error("JSON parse error:", err);
       return res.status(200).json({
         recommended: [],
         reason: "AI recommend failed",
@@ -84,7 +84,7 @@ Format JSON:
       });
     }
   } catch (err: any) {
-    console.error("❌ Server error:", err);
+    console.error("Server error:", err);
     return res
       .status(500)
       .json({ error: "OpenAI request failed", detail: err.message });

@@ -1,13 +1,13 @@
 import { NavLink } from "react-router-dom";
 import { useTasks } from "../context/TasksContext";
 import { useState, useRef, useEffect } from "react";
+import logo from "../assets/hackathon-graphic.svg";
 import "../index.css";
 
 export default function Navbar() {
   const { tasks } = useTasks();
   const [open, setOpen] = useState(false);
   const [cleared, setCleared] = useState<boolean>(() => {
-  // Lấy trạng thái từ localStorage khi load
   return localStorage.getItem("notificationsCleared") === "true";
   });
   const notifRef = useRef<HTMLDivElement>(null);
@@ -30,7 +30,6 @@ export default function Navbar() {
 
   const totalAlerts = cleared ? 0 : overdueTasks.length + dueNowTasks.length;
 
-  // 🔥 Đóng khi click ra ngoài
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
@@ -41,16 +40,17 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ✅ Clear all chỉ ẩn thông báo
   const clearAll = () => {
   setCleared(true);
-  localStorage.setItem("notificationsCleared", "true"); // lưu vào localStorage
+  localStorage.setItem("notificationsCleared", "true"); 
   setOpen(false);
   };
 
   return (
     <nav className="navbar">
+      <img src = {logo} className="navbar-logo-img"></img>
       <div className="navbar-logo">Student Time Manager</div>
+      
       <div className="navbar-links">
         <NavLink
           to="/do-now"
@@ -76,8 +76,6 @@ export default function Navbar() {
         >
           Analytics
         </NavLink>
-
-        {/* Notifications */}
         <div
           className="nav-link notification"
           onClick={() => setOpen((prev) => !prev)}
@@ -117,8 +115,6 @@ export default function Navbar() {
                       ))}
                     </>
                   )}
-
-                  {/* Nút Clear all */}
                   {totalAlerts > 0 && (
                     <button className="clear-btn" onClick={clearAll}>
                       Clear all

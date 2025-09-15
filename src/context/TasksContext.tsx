@@ -15,10 +15,10 @@ export interface Task {
   id: string;
   title: string;
   done: boolean;
-  officialDeadline?: string;   // hạn chính thức
-  realDeadline?: string;       // hạn thực tế (đã trừ estimate + delay)
-  estimatedMinutes?: number;   // thời gian dự kiến (phút)
-  doneAt?: string;             // thời điểm hoàn thành
+  officialDeadline?: string;   
+  realDeadline?: string;       
+  estimatedMinutes?: number;   
+  doneAt?: string;             
 }
 
 interface TasksContextType {
@@ -33,12 +33,10 @@ interface TasksContextType {
   removeTask: (id: string) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
 
-  // 🆕 AI recommend
   recommendedTasks: Task[];
   reason: string;
   fetchRecommendedTasks: (mood: string) => Promise<void>;
 
-  // 🆗 giữ local suggest (fallback)
   suggestTasksForMood: (mood: string) => Task[];
 }
 
@@ -73,7 +71,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
     if (officialDeadline) {
       const od = new Date(officialDeadline).getTime();
-      const defaultDelay = 15; // mặc định trễ 15 phút
+      const defaultDelay = 15; 
       realDeadline = new Date(
         od - (estimatedMinutes + defaultDelay) * 60_000
       ).toISOString();
@@ -139,7 +137,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   };
 
   // ======================
-  // 🆕 Gọi AI để recommend
+  // Gọi AI để recommend
   // ======================
   const fetchRecommendedTasks = async (mood: string) => {
     try {

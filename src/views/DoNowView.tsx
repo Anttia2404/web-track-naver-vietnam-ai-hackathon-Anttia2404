@@ -4,7 +4,7 @@ import "../index.css";
 
 interface MetaData {
   start?: number;
-  actual?: number; // phút
+  actual?: number; 
 }
 
 export default function DoNowView() {
@@ -31,17 +31,14 @@ export default function DoNowView() {
     "all" | "pending" | "done"
   >("all");
 
-  // 🆕 Mood state (user chọn)
   const [mood, setMood] = useState("all");
 
-  // 🆕 Gọi AI khi mood thay đổi
   useEffect(() => {
     if (mood !== "all") {
       fetchRecommendedTasks(mood);
     }
   }, [mood, fetchRecommendedTasks]);
 
-  // 🆕 Pagination
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
@@ -167,10 +164,10 @@ export default function DoNowView() {
         const effectiveDeadline = deadlineMs - avgDelay * 60_000;
 
         if (now >= effectiveDeadline && now < deadlineMs) {
-          new Notification("⏰ Bắt đầu ngay kẻo trễ!", {
+          new Notification("⏰ Start now before it's too late!", {
             body: `Task: ${t.title}\nDeadline: ${new Date(
               t.officialDeadline
-            ).toLocaleTimeString()}\nThói quen trễ: ~${avgDelay} phút`,
+            ).toLocaleTimeString()}\nAvg delay: ~${avgDelay} mins`,
           });
         }
       });
@@ -179,49 +176,43 @@ export default function DoNowView() {
     return () => clearInterval(interval);
   }, [tasks, meta]);
 
-  // 🆕 Chọn danh sách hiển thị
-  // 🆕 Chọn danh sách hiển thị
-const visibleTasks = useMemo(() => {
-  let baseList =
-    mood !== "all"
-      ? recommendedTasks.length > 0
-        ? recommendedTasks
-        : suggestTasksForMood(mood)
-      : sortedTasks; // ✅ dùng sortedTasks thay vì tasks
+  const visibleTasks = useMemo(() => {
+    let baseList =
+      mood !== "all"
+        ? recommendedTasks.length > 0
+          ? recommendedTasks
+          : suggestTasksForMood(mood)
+        : sortedTasks;
 
-  const filtered = baseList.filter((t) => {
-    const matchTitle = t.title
-      .toLowerCase()
-      .includes(search.toLowerCase());
-    const matchStatus =
-      filterStatus === "all" ||
-      (filterStatus === "done" && t.done) ||
-      (filterStatus === "pending" && !t.done);
+    const filtered = baseList.filter((t) => {
+      const matchTitle = t.title
+        .toLowerCase()
+        .includes(search.toLowerCase());
+      const matchStatus =
+        filterStatus === "all" ||
+        (filterStatus === "done" && t.done) ||
+        (filterStatus === "pending" && !t.done);
 
-    return matchTitle && matchStatus;
-  });
+      return matchTitle && matchStatus;
+    });
 
-  const start = (page - 1) * pageSize;
-  return filtered.slice(start, start + pageSize);
-}, [sortedTasks, mood, recommendedTasks, search, filterStatus, page]);
-
-
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [sortedTasks, mood, recommendedTasks, search, filterStatus, page]);
 
   return (
     <div className="gradient-background">
       <div className="do-now-container">
         <h2 style={{ display: "flex", justifyContent: "center" }}>Do Now</h2>
-        {/* 🆕 Nếu có lý do từ AI thì show */}
         {mood !== "all" && reason && (
           <p style={{ textAlign: "center", fontStyle: "italic" }}>
-            🤖 Gợi ý AI ({mood}): {reason}
+            🤖 AI Suggestion ({mood}): {reason}
           </p>
         )}
-        {/* Thanh thêm task */}
         <form onSubmit={handleSubmit} className="task-form">
           <input
             type="text"
-            placeholder="Tiêu đề công việc..."
+            placeholder="Task title..."
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
@@ -239,19 +230,17 @@ const visibleTasks = useMemo(() => {
                 e.target.value === "" ? "" : Number(e.target.value)
               )
             }
-            placeholder="Thời gian thực hiện (phút)..."
+            placeholder="Estimated time (mins)..."
           />
-          <button type="submit">Thêm nhiệm vụ</button>
+          <button type="submit">Add Task</button>
         </form>
-
-        {/* Thanh tìm kiếm + lọc + mood */}
         <div
           className="filter-bar"
           style={{ display: "flex", gap: "8px", margin: "12px 0" }}
         >
           <input
             type="text"
-            placeholder="Tìm kiếm nhiệm vụ..."
+            placeholder="Search task..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{ flex: 1, padding: "6px" }}
@@ -261,23 +250,21 @@ const visibleTasks = useMemo(() => {
             onChange={(e) => setFilterStatus(e.target.value as any)}
             style={{ padding: "6px" }}
           >
-            <option value="all">Tất cả</option>
-            <option value="pending">Đang chờ</option>
-            <option value="done">Hoàn thành</option>
+            <option value="all">All</option>
+            <option value="pending">Pending</option>
+            <option value="done">Done</option>
           </select>
           <select
             value={mood}
             onChange={(e) => setMood(e.target.value)}
             style={{ padding: "6px" }}
           >
-            <option value="all">Mood: bất kỳ</option>
-            <option value="lazy">😴 Lười</option>
-            <option value="focus">🎯 Tập trung</option>
-            <option value="stress">😰 Căng thẳng</option>
+            <option value="all">Mood: Any</option>
+            <option value="lazy">😴 Lazy</option>
+            <option value="focus">🎯 Focus</option>
+            <option value="stress">😰 Stressed</option>
           </select>
         </div>
-
-        {/* Danh sách task */}
         <ul className="task-list">
           {visibleTasks.map((task) => {
             const m = meta[task.id];
@@ -287,7 +274,7 @@ const visibleTasks = useMemo(() => {
                   {task.title}
                   {task.officialDeadline && (
                     <small className="official">
-                      chính thức: {new Date(task.officialDeadline).toLocaleString()}
+                      deadline: {new Date(task.officialDeadline).toLocaleString()}
                     </small>
                   )}
                   {task.estimatedMinutes && (
@@ -305,7 +292,7 @@ const visibleTasks = useMemo(() => {
                       style={{ marginRight: 10, padding: 5 }}
                       className="start-btn"
                     >
-                      Bắt đầu
+                      Start
                     </button>
                   )}
 
@@ -314,7 +301,7 @@ const visibleTasks = useMemo(() => {
                     style={{ marginRight: 10, padding: 5 }}
                     className="done-btn"
                   >
-                    {task.done ? "Hoàn tác" : "Hoàn thành"}
+                    {task.done ? "Undo" : "Complete"}
                   </button>
 
                   <button
@@ -322,15 +309,13 @@ const visibleTasks = useMemo(() => {
                     className="delete-btn"
                     style={{ padding: 5 }}
                   >
-                    Xóa
+                    Delete
                   </button>
                 </div>
               </li>
             );
           })}
         </ul>
-
-        {/* 🆕 Pagination controls */}
         <div
           style={{
             display: "flex",
@@ -343,14 +328,14 @@ const visibleTasks = useMemo(() => {
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
           >
-            Trang trước
+            Previous
           </button>
-          <span>Trang {page}</span>
+          <span>Page {page}</span>
           <button
             onClick={() => setPage((p) => p + 1)}
             disabled={visibleTasks.length < pageSize}
           >
-            Trang sau
+            Next
           </button>
         </div>
       </div>

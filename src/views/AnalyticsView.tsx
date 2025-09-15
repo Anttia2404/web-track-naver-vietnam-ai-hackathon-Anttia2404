@@ -15,10 +15,8 @@ import {
 } from "recharts";
 import type { Task } from "../context/TasksContext";
 
-// helper: format date YYYY-MM-DD
 const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
-// helper: tính hạn thực tế từ officialDeadline + avgDelay (fallback 15p)
 const getRealDeadline = (task: Task) => {
   if (!task.officialDeadline) return undefined;
   const avgDelay = 15;
@@ -28,7 +26,6 @@ const getRealDeadline = (task: Task) => {
 
 export default function AnalyticsView() {
   const { tasks } = useTasks();
-
   // --- Pie chart: Completed vs Pending
   const doneCount = tasks.filter((t) => t.done).length;
   const notDoneCount = tasks.length - doneCount;
@@ -98,8 +95,6 @@ export default function AnalyticsView() {
     <div className="gradient-background">
       <div className="analytics-container">
         <h2>Analytics</h2>
-
-        {/* Pie Chart */}
         <div>
           <h3>Task Status</h3>
           <ResponsiveContainer width="100%" height="100%">
@@ -120,8 +115,6 @@ export default function AnalyticsView() {
             </PieChart>
           </ResponsiveContainer>
         </div>
-
-        {/* Tasks by Deadline */}
         <div>
           <h3>Tasks by Deadline</h3>
           <ResponsiveContainer width="100%" height="100%">
@@ -135,7 +128,6 @@ export default function AnalyticsView() {
           </ResponsiveContainer>
         </div>
 
-        {/* Productivity Over Time */}
         <div>
           <h3>Productivity Over Time</h3>
           <ResponsiveContainer width="100%" height="100%">
@@ -149,7 +141,6 @@ export default function AnalyticsView() {
           </ResponsiveContainer>
         </div>
 
-        {/* Best Work Hours */}
         <div>
           <h3>Best Work Hours</h3>
           <ResponsiveContainer width="100%" height="100%">
